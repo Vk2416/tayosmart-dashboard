@@ -1,8 +1,19 @@
+import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
-// Define allowed origins
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+const app = express();
+const PORT = process.env.PORT || 5000;
+
+// =============================================
+// 1. CORS CONFIGURATION
+// =============================================
 const allowedOrigins = [
-  'https://tayosmart-dashboard-frontend.vercel.app', // Your Live Frontend
+  'https://tayosmart-dashboard-frontend.vercel.app', // Your Live Frontend (FIX THIS URL)
   'http://localhost:5173' // Local development (Vite default)
 ];
 
@@ -20,18 +31,42 @@ const corsOptions = {
   optionsSuccessStatus: 200
 };
 
-// Rate limiting configuration
+// =============================================
+// 2. RATE LIMITING CONFIGURATION
+// =============================================
 const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // Limit each IP to 100 requests per windowMs
-    message: {
-        error: 'Too many requests from this IP, please try again after 15 minutes.'
-    },
-    standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
-    legacyHeaders: false, // Disable the `X-RateLimit-*` headers
-    skip: (req) => req.path === '/health' // Optional: skip health checks if you have them
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  message: {
+    error: 'Too many requests from this IP, please try again after 15 minutes.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => req.path === '/health'
 });
 
-// Apply rate limiting to all routes
-app.use(limiter);
-app.use(cors(corsOptions));
+// =============================================
+// 3. APPLY MIDDLEWARE (Order Matters!)
+// =============================================
+app.use(cors(corsOptions));       // CORS first
+app.use(helmet());                // Security headers
+app.disable('x-powered-by');      // Hide tech stack
+app.use(express.json());          // Parse JSON bodies
+app.use(limiter);                 // Rate limiting
+
+// =============================================
+// 4. ROUTES (Your API endpoints)
+// =============================================
+// Example route - replace with your actual routes
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'OK' });
+});
+
+// Your login, dashboard, etc. routes go here...
+
+// =============================================
+// 5. START SERVER
+// =============================================
+app.listen(PORT, () => {
+  console.log(`Backend server running on port ${PORT}`);
+});
