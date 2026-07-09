@@ -1,45 +1,23 @@
-import express from 'express'
-import cors from 'cors'
-import { createServer } from 'http'
-import { Server } from 'socket.io'
-import dotenv from 'dotenv'
+import cors from 'cors';
 
-dotenv.config()
+// Define allowed origins
+const allowedOrigins = [
+  'https://tayosmart-dashboard-frontend.vercel.app', // Your Live Frontend
+  'http://localhost:5173' // Local development (Vite default)
+];
 
-const app = express()
-const server = createServer(app)
-const io = new Server(server, {
-    cors: {
-        origin: 'http://localhost:3000',
-        methods: ['GET', 'POST'],
-    },
-})
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true, // Allow cookies/authorization headers
+  optionsSuccessStatus: 200
+};
 
-app.use(cors())
-app.use(express.json())
-
-import pumpRoutes from './routes/pumps.js'
-import alertRoutes from './routes/alerts.js'
-import reportRoutes from './routes/reports.js'
-
-app.use('/api/pumps', pumpRoutes)
-app.use('/api/alerts', alertRoutes)
-app.use('/api/reports', reportRoutes)
-
-io.on('connection', (socket) => {
-    console.log('Client connected:', socket.id)
-
-    setInterval(() => {
-        const pressure = (6.0 + Math.random() * 0.5).toFixed(1)
-        socket.emit('pressure-update', { pressure, timestamp: new Date() })
-    }, 4000)
-
-    socket.on('disconnect', () => {
-        console.log('Client disconnected:', socket.id)
-    })
-})
-
-const PORT = process.env.PORT || 5000
-server.listen(PORT, () => {
-    console.log(`Backend server running on port ${PORT}`)
-})
+app.use(cors(corsOptions));
